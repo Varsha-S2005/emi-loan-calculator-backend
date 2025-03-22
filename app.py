@@ -4,13 +4,13 @@ import math
 app = Flask(__name__)
 
 def calculate_emi(principal, rate, time):
-    rate = rate / (12 * 100)  # Monthly interest rate
-    time = time * 12  # Loan tenure in months
+    rate = rate / (12 * 100)  # Convert annual rate to monthly rate
+    time = time * 12  # Convert years to months
     emi = (principal * rate * math.pow(1 + rate, time)) / (math.pow(1 + rate, time) - 1)
     return round(emi, 2)
 
 def generate_amortization_schedule(principal, rate, time, emi):
-    rate = rate / (12 * 100)  # Monthly interest rate
+    rate = rate / (12 * 100)  # Convert annual rate to monthly rate
     balance = principal
     schedule = []
 
@@ -18,14 +18,20 @@ def generate_amortization_schedule(principal, rate, time, emi):
         interest_payment = round(balance * rate, 2)
         principal_payment = round(emi - interest_payment, 2)
         balance = round(balance - principal_payment, 2)
+        # Ensure balance never goes negative
+        balance = max(balance, 0)
 
         schedule.append({
             "month": month,
             "emi": round(emi, 2),
             "interest_payment": interest_payment,
             "principal_payment": principal_payment,
-            "balance": max(balance, 0)  # Ensure balance never goes negative
+            "balance": balance
         })
+
+        # Stop schedule if the balance is zero to avoid unnecessary iterations
+        if balance <= 0:
+            break
 
     return schedule
 
@@ -33,12 +39,18 @@ def generate_amortization_schedule(principal, rate, time, emi):
 def calculate_emi_endpoint():
     try:
         data = request.get_json()
+        if not all(key in data for key in ['principal', 'rate', 'time']):
+            raise ValueError("Missing required data fields: principal, rate, or time")
+
         principal = float(data['principal'])
         rate = float(data['rate'])
-        time = int(data['time'])
+        time = float(data['time'])  # Use float to avoid issues with decimal inputs
+
+        if principal <= 0 or rate <= 0 or time <= 0:
+            raise ValueError("Principal, rate, and time must be positive numbers")
 
         emi = calculate_emi(principal, rate, time)
-        schedule = generate_amortization_schedule(principal, rate, time, emi)
+        schedule = generate_amortization_schedule(principal, rate, int(time), emi)
 
         return jsonify({"emi": emi, "schedule": schedule})
 
