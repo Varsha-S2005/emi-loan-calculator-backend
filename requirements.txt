@@ -1,4 +1,4 @@
-flask
-flask-cors
-pandas       # To handle the amortization schedule
+Flask
+Flask-Cors
 gunicorn
+mysql-connector-python
