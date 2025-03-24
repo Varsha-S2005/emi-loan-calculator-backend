@@ -18,20 +18,33 @@ db = mysql.connector.connect(
 @app.route('/calculate_emi', methods=['POST'])
 def calculate_emi():
     try:
+        # Print headers and incoming data for debugging
+        print("Headers:", request.headers)
+        print("Data:", request.data)
+        print("JSON Data:", request.get_json())
+
         # Check if the request content type is JSON
         if request.content_type != 'application/json':
-            return jsonify({"error": "Unsupported Media Type. Content-Type must be 'application/json'."}), 415
-        
+            return jsonify({"error": f"Unsupported Media Type: {request.content_type}. Content-Type must be 'application/json'."}), 415
+
         # Get JSON data from request
         data = request.get_json()
+        
+        # Check if the data is None (invalid or empty JSON)
+        if data is None:
+            return jsonify({"error": "Invalid or empty JSON payload."}), 400
 
         # Validate required fields
         if not all(key in data for key in ('principal', 'rate', 'time')):
             return jsonify({"error": "Missing required parameters: 'principal', 'rate', or 'time'."}), 400
-        
-        principal = float(data['principal'])
-        rate = float(data['rate']) / 12 / 100  # Convert annual rate to monthly and percentage to decimal
-        time = int(data['time']) * 12  # Convert years to months
+
+        # Parse and validate input values
+        try:
+            principal = float(data['principal'])
+            rate = float(data['rate']) / 12 / 100  # Convert annual rate to monthly and percentage to decimal
+            time = int(data['time']) * 12  # Convert years to months
+        except ValueError:
+            return jsonify({"error": "Invalid data type for 'principal', 'rate', or 'time'."}), 400
 
         # EMI calculation formula
         emi = (principal * rate * math.pow(1 + rate, time)) / (math.pow(1 + rate, time) - 1)
@@ -45,6 +58,7 @@ def calculate_emi():
         return jsonify({"principal": principal, "rate": rate * 12 * 100, "time": time // 12, "emi": round(emi, 2)})
 
     except Exception as e:
+        print(f"Error: {str(e)}")  # Print the error for debugging
         return jsonify({"error": str(e)}), 500
 
 # Route to get all EMI records
@@ -58,6 +72,7 @@ def get_emi_records():
         return jsonify(records)
 
     except Exception as e:
+        print(f"Error: {str(e)}")  # Print the error for debugging
         return jsonify({"error": str(e)}), 500
 
 # Health check route
