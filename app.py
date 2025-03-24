@@ -1,39 +1,30 @@
-import os
 from flask import Flask, request, jsonify
 
 app = Flask(__name__)
 
-# Home route
 @app.route('/')
 def home():
     return "Welcome to the Loan EMI Calculator!"
 
-# Loan EMI Calculation route
 @app.route('/calculate_emi', methods=['POST'])
 def calculate_emi():
     try:
+        # Get the JSON data from the request
         data = request.get_json()
-        principal = float(data.get('principal', 0))
-        rate = float(data.get('rate', 0))
-        time = int(data.get('time', 0))
 
-        if principal <= 0 or rate <= 0 or time <= 0:
-            return jsonify({"error": "Invalid input values"}), 400
-
-        # Convert annual interest rate to monthly and time in months
-        monthly_rate = rate / (12 * 100)
-        time_in_months = time * 12
+        # Extract the principal, rate, and time from the JSON data
+        principal = float(data.get('principal'))
+        rate = float(data.get('rate')) / 100 / 12  # Annual rate to monthly rate
+        time = float(data.get('time')) * 12  # Years to months
 
         # EMI calculation formula
-        emi = (principal * monthly_rate * pow(1 + monthly_rate, time_in_months)) / (pow(1 + monthly_rate, time_in_months) - 1)
-        emi = round(emi, 2)
+        emi = (principal * rate * (1 + rate)**time) / ((1 + rate)**time - 1)
 
-        return jsonify({"emi": emi})
+        # Return the EMI as a JSON response
+        return jsonify({"emi": round(emi, 2)})
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"error": str(e)}), 400
 
-# Run the app
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+if __name__ == '__main__':
+    app.run(debug=True)
