@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import math
 import mysql.connector
+import os  # Importing os to get the PORT environment variable
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for all routes
@@ -81,4 +82,5 @@ def health_check():
     return jsonify({"status": "UP"}), 200
 
 if __name__ == '__main__':
-    app.run(debug=True, host='127.0.0.1', port=8080)
+    port = int(os.environ.get('PORT', 8080))  # Get the dynamic port from environment variable
+    app.run(debug=True, host='0.0.0.0', port=port)
